@@ -49,7 +49,7 @@ for i in range(bits, 0, -1):
     co2_values = remove_values(co2_values, mask, False)
 
     if len(o2_values) == 1 and len(co2_values) == 1:
-        pass
+        break
     
 print(f"o2 {o2_values[0]:0{bits}b} {o2_values[0]} co1 {co2_values[0]:0{bits}b} {co2_values[0]}")
 print(f"answer {o2_values[0] * co2_values[0]}")
