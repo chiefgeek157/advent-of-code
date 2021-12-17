@@ -8,16 +8,17 @@ with open(filename, "r") as f:
         fields = line.strip().split()
         command = fields[0]
         value = int(fields[1])
-        if command == "forward":
-            position[0] += value
-            position[1] += aim * value
-        elif command == "up":
-            aim -= value
-        elif command == "down":
-            aim += value
-        else:
-            print("Unexpected command {0}".format(command))
-            exit(1)
+        match command:
+            case "forward":
+                position[0] += value
+                position[1] += aim * value
+            case "up":
+                aim -= value
+            case "down":
+                aim += value
+            case _:
+                print("Unexpected command {0}".format(command))
+                exit(1)
 
         print("command {0} value {1}: pos {2} aim {3}".format(command, value, position, aim))
 
