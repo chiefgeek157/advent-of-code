@@ -22,8 +22,9 @@ class Decoder():
             packet, bits_used = factory.create(bits[offset:])
             if packet is None:
                 done = True
+            else:
+                packets.append(packet)
             offset += bits_used
-            packets.append(packet)
 
         return packets
 
@@ -31,6 +32,7 @@ class PacketFactory():
 
     VERSION_BITS = 3
 
+    PACKET_MIN_LENGTH = 11
     PACKET_TYPE_BITS = 3
     PACKET_TYPE_LIERAL = 4
 
@@ -45,20 +47,22 @@ class PacketFactory():
     # The use of type allows other packets that already know
     # The type to pass it in
     def create(self, bits):
-        packet = None
-        offset = 0
+        print(f'PacketFactory.create(bits={bits})')
+        if len(bits) < self.PACKET_MIN_LENGTH:
+            print(f'Less than {self.PACKET_MIN_LENGTH} of data left: {bits}')
+            return None, len(bits)
 
         # Read packet version
+        offset = 0
         version, bits_used = self._read_version(bits[offset:])
         offset += bits_used
         print(f'Packet version: {version}')
 
         type, bits_used = self._read_type(bits[offset:])
         offset += bits_used
-        if type is not None:
-            print(f'Packet Type {type}')
-            packet, bits_used = self._handle_type(version, type, bits[offset:])
-            offset += bits_used
+        print(f'Packet Type {type}')
+        packet, bits_used = self._handle_type(version, type, bits[offset:])
+        offset += bits_used
 
         return packet, offset
 
@@ -67,21 +71,12 @@ class PacketFactory():
 
     # Reads and returns the next packet type and bits used
     def _read_type(self, bits):
-        type = None
         offset = 0
-        if len(bits) < self.PACKET_TYPE_BITS:
-            offset = len(bits)
-        else:
-            type = int(bits[:self.PACKET_TYPE_BITS], 2)
-            offset = self.PACKET_TYPE_BITS
-            if type == 0:
-                type = None
-                offset = len(bits)
-        if type is None:
-            print(f'Discarding last {offset} bits: {bits}')
+        type = int(bits[:self.PACKET_TYPE_BITS], 2)
+        print(f'Read packet type {type}')
+        offset = self.PACKET_TYPE_BITS
         return type, offset
 
-    # NOTE: version is ignored for now
     def _handle_type(self, version, type, bits):
         print(f'Handling type {type}')
         packet = None
@@ -89,7 +84,7 @@ class PacketFactory():
         match type:
             case self.PACKET_TYPE_LIERAL:
                 print(f'Detected Literal')
-                packet = Literal(self)
+                packet = Literal(version, self)
                 offset += packet.read(bits[offset:])
             case _:
                 # For now all other cases are operators
@@ -100,10 +95,10 @@ class PacketFactory():
                 match operator_type:
                     case self.OPERATOR_TYPE_SIMPLE:
                         print(f'Detected SimpleOperator')
-                        packet = SimpleOperator(self)
-                    # case 1:
-                    #     print(f'Detected Type1Operator')
-                    #     packet = Type1Operator(self)
+                        packet = SimpleOperator(version, self)
+                    case 1:
+                        print(f'Detected ComplexOperator')
+                        packet = ComplexOperator(version, self)
                     case _:
                         raise ValueError(f'Unknown operator type {operator_type}')
                 offset += packet.read(bits[offset:])
@@ -116,19 +111,28 @@ class PacketFactory():
 
 class Packet():
 
-    def __init__(self, factory):
+    def __init__(self, version, factory):
+        self.version = version
         self.factory = factory
+        self.operands = None
 
     # Read data and return bits used
     def read(self, bits):
         return 0
 
+    def sum_versions(self):
+        total = self.version
+        if self.operands is not None:
+            for packet in self.operands:
+                total += packet.sum_versions()
+        return total
+
 class Literal(Packet):
 
     DIGIT_BITS = 4
 
-    def __init__(self, factory):
-        super(Literal, self).__init__(factory)
+    def __init__(self, version, factory):
+        super(Literal, self).__init__(version, factory)
         self.value = None
     
     # Read data and return bits used
@@ -155,6 +159,7 @@ class Literal(Packet):
             # print(f'Literal value now {self.value}')
             offset += self.DIGIT_BITS
 
+        print(f'Read Liternal value {self.value}')
         return num_digits * (1 + self.DIGIT_BITS)
 
     def __str__(self):
@@ -165,8 +170,8 @@ class Literal(Packet):
 
 class Operator(Packet):
 
-    def __init__(self, factory, type):
-        super(Operator, self).__init__(factory)
+    def __init__(self, version, factory, type):
+        super(Operator, self).__init__(version, factory)
         self.type = type
         self.operands = None
 
@@ -180,23 +185,23 @@ class SimpleOperator(Operator):
 
     LENGTH_BITS = 15
 
-    def __init__(self, factory):
-        super(SimpleOperator, self).__init__(factory, 0)
+    def __init__(self, version, factory):
+        super(SimpleOperator, self).__init__(version, factory, 0)
 
     def read(self, bits):
         print(f'Reading SimpleOperator from {bits}')
         offset = 0
         # Read the length
         length = int(bits[offset:offset + self.LENGTH_BITS], 2)
-        print(f'Length {length}')
+        print(f'Operands length {length}')
         offset += self.LENGTH_BITS
 
         data = bits[offset:offset + length]
         data_offset = 0
+        self.operands = []
         while data_offset < length:
             print(f'Reading Literal operand from {data[data_offset:]}')
-            packet, bits_used = self.factory.create(data[data_offset:],
-                PacketFactory.PACKET_TYPE_LIERAL)
+            packet, bits_used = self.factory.create(data[data_offset:])
             self.operands.append(packet)
             data_offset += bits_used
         offset += data_offset
@@ -207,13 +212,45 @@ class SimpleOperator(Operator):
         return f'{self.type}'
 
     def __repr__(self):
-        return f'Type0Operator({self.type})'
+        return f'SimpleOperator({self.type}, operands: {self.operands})'
 
-filename = 'test1.txt'
+class ComplexOperator(Operator):
+
+    PACKET_COUNT_BITS = 11
+
+    def __init__(self, version, factory):
+        super(ComplexOperator, self).__init__(version, factory, 1)
+
+    def read(self, bits):
+        print(f'Reading ComplexOperator from {bits}')
+        offset = 0
+        # Read the numberof subpackets
+        packet_count = int(bits[offset:offset + self.PACKET_COUNT_BITS], 2)
+        print(f'Operands count {packet_count}')
+        offset += self.PACKET_COUNT_BITS
+
+        self.operands = []
+        packets_read = 0
+        while packets_read < packet_count:
+            print(f'Reading operand packet from {bits[offset:]}')
+            packet, bits_used = self.factory.create(bits[offset:])
+            self.operands.append(packet)
+            packets_read += 1
+            offset += bits_used
+
+        return offset
+    
+    def __str__(self):
+        return f'{self.type}'
+
+    def __repr__(self):
+        return f'ComplexOperator({self.type}, operands: {self.operands})'
+
+#filename = 'test1.txt'
 #filename = 'test2.txt'
 #filename = 'test3.txt'
-#filename = 'input.txt'
-use_line = 2
+filename = 'input.txt'
+use_line = 1
 
 colorama.init()
 
@@ -230,3 +267,8 @@ with open(filename, 'r') as f:
 decoder = Decoder()
 packets = decoder.decode(line)
 print(f'Packets: {packets}')
+
+total = 0
+for packet in packets:
+    total += packet.sum_versions()
+print(f'Answer: {total}')
