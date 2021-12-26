@@ -11,7 +11,7 @@ filename = 'input.txt'
 
 colorama.init()
 
-use_screen = False
+use_screen = True
 
 def move_to(r:int, c:int):
     if use_screen and r is not None and c is not None:
@@ -44,7 +44,7 @@ def print_board(line:int, graph:nx.Graph, width:int, height:int,
             if x < width - 1:
                 if edges and ((x, y), (x+1, y)) in graph.edges:
                     print('-', end='')
-                else:
+                elif scores:
                     print(' ', end='')
             print(f'{Style.RESET_ALL}', end='')
         print()
@@ -52,18 +52,20 @@ def print_board(line:int, graph:nx.Graph, width:int, height:int,
             for x in range(width):
                 if edges and ((x, y), (x, y+1)) in graph.edges:
                     if risks and not scores:
-                        print('| ', end='')
+                        print('|', end='')
                     elif not risks and scores:
-                        print(' |  ', end='')
+                        print(' | ', end='')
                     if risks and scores:
-                        print('  |   ', end='')
+                        print('  |  ', end='')
                 else:
                     if risks and not scores:
-                        print('  ', end='')
+                        print(' ', end='')
                     elif not risks and scores:
-                        print('    ', end='')
+                        print('   ', end='')
                     if risks and scores:
-                        print('      ', end='')
+                        print('     ', end='')
+                if x < width - 1 and scores:
+                    print(' ', end='')
             print()
 
 def clear_screen():
@@ -168,7 +170,7 @@ sum_line = board_height + 2
 input_line = sum_line + 1
 work_line = input_line + 1
 
-print_board(grid_line, graph, board_width, board_height, None, None, None, True, False, True)
+print_board(grid_line, graph, board_width, board_height, None, None, None, True, False, False)
 
 # For convenience
 nodes = graph.nodes
@@ -203,7 +205,7 @@ while work:
     # print(f'curr_risk: {curr_risk}')
 
     # Add the position to the path and increment the total sum
-    # print_grid(nodes, width, height, work, curr_pos)
+    print_board(grid_line, graph, board_width, board_height, work, curr_pos, None, True, False, False)
 
     # If we are at the end, we are done
     if curr_pos == end_pos:
@@ -238,5 +240,6 @@ while pos != start_pos:
 path.append(start_pos)
 path.reverse()
 
-print_board(grid_line, graph, board_width, board_height, None, None, path, False, True, True)
+# print_board(grid_line, graph, board_width, board_height, None, None, path, False, True, True)
+print_board(grid_line, graph, board_width, board_height, None, None, path, True, False, False)
 print(f'total risk={nodes[end_pos]["score"]}')
