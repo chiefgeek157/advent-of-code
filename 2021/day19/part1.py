@@ -5,15 +5,9 @@ import scanner as sc
 # filename = '2021/day19/test3.txt'
 filename = '2021/day19/input.txt'
 
-scanners = []
-with open(filename, 'r') as f:
-    s = sc.Scanner.read(f)
-    while s:
-        scanners.append(s)
-        s = sc.Scanner.read(f)
-for s in scanners: print(f'Scanner[{s.id}]:\n{s}')
+sa = sc.ScannerArray()
+sa.read_file(filename)
 
-c = sc.Combiner()
-c.combine(scanners)
-# print(f'Scanner[{scanners[0].id}]:\n{scanners[0]}')
-print(f'Answer: {len(scanners[0].beacons)}')
+beacons = sa.combine()
+print(f'beacons\n{beacons}')
+print(f'Answer: {len(beacons)}')
