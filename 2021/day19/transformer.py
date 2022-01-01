@@ -17,6 +17,9 @@ class Transformer():
     def affine(self, rot, trans=(0, 0, 0)):
         return aff.compose(trans, self.rot(rot), np.ones(3))
 
+    def decompose(self, affine):
+        return aff.decompose44(affine)
+
     def append_affine(self, affine, rot, trans):
         post = self.affine(rot, trans)
         # print(f'\npre\n{pre}\naff\n{affine}\ndot\n{np.dot(pre,affine)}')
