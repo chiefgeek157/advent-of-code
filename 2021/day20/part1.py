@@ -12,6 +12,6 @@ with open(filename, 'r') as f:
     f.readline()
     i.read(f)
 
-i2 = e.enhance(i, 2)
+i2 = e.enhance(i, 50)
 print(f'{i2}')
 print(f'Answer is {i2.lit_count()}')
