@@ -1,3 +1,5 @@
+import functools
+
 # def evaluate(board_size, item):
 #     print(f'Evaluating item {item}')
 #     space = ((item.spaces[item.player] + item.roll - 1) % board_size) + 1
@@ -47,12 +49,25 @@
 #     def __str__(self):
 #         return f'player {self.player} spaces {self.spaces} scores {self.scores} rolls {self.rolls}'
 
-p1_pos0 = 4
-p2_pos0 = 8
-p1_wins = 0
-p2_wins = 0
-board_size = 10
-winning_score = 2
+@functools.cache
+def play_round(my_pos, my_score, other_pos, other_score):
+    if my_score >= winning_score:
+        return 1, 0
+    elif other_score >= winning_score:
+        return 0, 1
+
+    my_wins = 0
+    other_wins = 0
+    for roll in roll_counts.keys():
+        new_pos = ((my_pos + roll - 1) % board_size) + 1
+        new_score = my_score + new_pos
+
+        ow, mw = play_round(other_pos, other_score, new_pos, new_score)
+
+        my_wins += mw * roll_counts[roll]
+        other_wins += ow * roll_counts[roll]
+
+    return my_wins, other_wins
 
 roll_counts = {}
 for i in range(3):
@@ -64,42 +79,11 @@ for i in range(3):
 
 print(f'roll counts {roll_counts}')
 
-# state[(player, p1_pos, ps_pos, p1_score, p2_score)] = count of ways to get to this state
-states = {}
-for player in range(2):
-    for p1_pos in range(10):
-        for p2_pos in range(10):
-            for p1_score in range(21):
-                for p2_score in range(21):
-                    # initial count is zero
-                    states[(player, p1_pos, p2_pos, p1_score, p2_score)] = 0
+p1_pos0 = 8
+p2_pos0 = 6
+board_size = 10
+winning_score = 21
 
-# Work items are a tuple (player_turn, p1_pos, p2_pos, p1_score, p2_score)
-work = []
-work.append((0, p1_pos0, p2_pos0, 0, 0))
-while work:
-    item = work.pop(0)
-    (player, p1_pos, p2_pos, p1_score, p2_score) = item
-    count = states[item]
-    for roll in roll_counts.keys():
-        incr = count + roll_counts[roll]
-        if player == 0:
-            p1_new_pos = ((p1_pos + roll - 1) % board_size) + 1
-            p1_new_score = min(winning_score, p1_score + p1_new_pos)
-            if p1_new_score < winning_score:
-                new_item = (1, p1_new_pos, p2_pos, p1_new_score, p2_score)
-                states[new_item] += incr
-                work.append(new_item)
-            else:
-                p1_wins += incr
-        else:
-            p2_new_pos = ((p2_pos + roll - 1) % board_size) + 1
-            p2_new_score = min(winning_score, p2_score + p2_new_pos)
-            if p1_new_score < winning_score:
-                new_item = (1, p1_new_pos, p2_pos, p1_new_score, p2_score)
-                states[p1_pos][p2_new_pos][p1_score][p2_new_score] += incr
-                work.append((1, p1_pos, p2_new_pos, p1_score, p2_new_score))
-            else:
-                p2_wins += incr
+p1_wins, p2_wins = play_round(p1_pos0, 0, p2_pos0, 0)
 
 print(f'Answer: p1 wins {p1_wins} p2 wins {p2_wins}')
