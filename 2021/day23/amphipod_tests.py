@@ -164,5 +164,10 @@ class StateTests(TestCase):
         s[10] = Piece.PIECES[7]
         self.assertTrue(s.is_final())
 
+    def test_state_read(self):
+         b = Board()
+         s = State.read('2021/day23/test1.txt', b)
+         print(f'State = \n{s}')
+
 if __name__ == '__main__':
     unittest.main()

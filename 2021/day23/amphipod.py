@@ -36,6 +36,8 @@ class Board():
     #       07    08    09    10
     #       11    12    13    14
 
+    __POSITIONS = range(0,14)
+
     # Home positions by piece type
     __HOME_POS = [[7, 11], [8, 12], [9, 13], [10, 14]]
 
@@ -67,6 +69,17 @@ class Board():
         [(10, 1)]                          # 14
     ]
 
+    __PATHS = {
+        ( 0,  7): ([ 1,  7], 3),
+        ( 0, 11): ([ 1,  7, 11], 4),
+        ( 0,  8): ([ 1,  2,  8], 5),
+        ( 0, 12): ([ 1,  2,  8, 12], 6),
+        ( 0,  7): ([ 1,  7], 3),
+        ( 0, 11): ([ 1,  7, 11], 4),
+        ( 0,  7): ([ 1,  7], 3),
+        ( 0, 11): ([ 1,  7, 11], 4),
+    }
+
     def __init__(self):
         pass
 
@@ -83,33 +96,36 @@ class Board():
     # Find all possible next states and the incremental cost for that state
     def find_next_states(self, state):
         next_states = []
-        for pos in range(19):
+        for pos in Board.__POSITIONS:
             piece = state[pos]
-            if piece > 0:
+            if piece is not None:
                 # This position is occupied
-                for adj, mult in pos_adjs[pos]:
-                    if state[adj] == 0 and self.is_allowed(piece, pos, adj):
+                for adj, mult in Board.__ADJS[pos]:
+                    if state[adj] is None and self.is_allowed(piece, pos, adj):
                         # This adjacent position is not occupied and the move
                         # is allowed
-                        new_state = cp.copy(state)
-                        new_state[pos] = 0
+                        new_state = cp.deepcopy(state)
+                        del new_state[pos]
+                        new_state.cost = None
                         new_state[adj] = piece
-                        new_cost = mult * move_costs[piece]
-                        next_states.append((new_state, new_cost))
+                        incr_cost = mult * piece.move_cost
+                        next_states.append((new_state, incr_cost))
         return next_states
 
     def is_allowed(self, piece, start, dest):
         # Pieces can only move from the hallway into homes that
         # match their correct type
-        if piece.type == 0 and start < 7 and dest != 7:
+        if start >= 7:
+            return True
+        elif dest < 7:
             return False
-        if piece.type == 1 and start < 7 and dest != 8:
+        elif piece.type == 0 and dest not in [7, 11] or \
+                piece.type == 1 and dest not in [8, 12] or \
+                piece.type == 2 and dest not in [9, 13] or \
+                piece.type == 3 and dest not in [10, 14]:
             return False
-        if piece.type == 2 and start < 7 and dest != 9:
-            return False
-        if piece.type == 3 and start < 7 and dest != 10:
-            return False
-        return True
+        else:
+            return True
 
 class State():
 
@@ -121,29 +137,37 @@ class State():
 
             pieces_read = []
             pos = 0
+
             pos = State.__parse_line(f.readline().strip(), pos, pieces_read, state)
             pos = State.__parse_line(f.readline().strip(), pos, pieces_read, state)
             pos = State.__parse_line(f.readline().strip(), pos, pieces_read, state)
         return state
 
     def __parse_line(line, pos, pieces_read, state):
+        state_pos = pos
         for c in line.strip():
-            if c != '#' and c != '.':
-                id = 1
-                if c in pieces_read:
-                    id = 2
+            # print(f'Reading char {c} as pos {pos}')
+            if c != '#':
+                if c == '.':
+                    if pos not in [2, 3, 4, 5]: state_pos += 1
                 else:
                     id = 1
-                    pieces_read.append(c)
-                piece = Piece(c, id)
-                state.add(piece, pos)
+                    if c in pieces_read:
+                        id = 2
+                    else:
+                        id = 1
+                        pieces_read.append(c)
+                    piece = Piece(c, id)
+                    # print(f'Setting pos {pos} to piece {piece}')
+                    state[state_pos] = piece
+                    state_pos += 1
                 pos += 1
-        return pos
+        return state_pos
 
-    def __init__(self, board, cost):
+    def __init__(self, board, cost = None):
         self.predecessor = None
+        self.cost = cost
         self.__board = board
-        self.__cost = cost
         # Dict of {pos, piece}
         self.__state = dict()
         self.__dist = None
@@ -160,12 +184,13 @@ class State():
             for pos, piece in self.__state.items(): self.__dist += self.__board.dist_to_goal(piece, pos)
         return self.__dist
 
-    def cost(self):
-        return self.__cost + self.dist_to_goal()
+    def total_cost(self):
+        return self.cost + self.dist_to_goal()
 
-    def update(self, cost, predecessor):
-        if cost < self.__cost:
-            self.__cost = cost
+    def update(self, incr_cost, predecessor):
+        new_cost = predecessor.cost + incr_cost
+        if self.cost is None or new_cost < self.cost:
+            self.cost = new_cost
             self.predecessor = predecessor
             return True
         return False
@@ -175,6 +200,12 @@ class State():
             if not self.__board.in_home_pos(piece, pos): return False
         return True
 
+    def cost_chain(self):
+        chain = f'{self.cost}'
+        if self.predecessor is not None:
+            chain = f'{self.predecessor.cost_chain()}.{chain}'
+        return chain
+
     def __getitem__(self, pos):
         return self.__state.get(pos)
 
@@ -183,11 +214,22 @@ class State():
         self.__dist = None
         self.__hash = None
 
+    def __delitem__(self, pos):
+        del self.__state[pos]
+        self.__dist = None
+        self.__hash = None
+
+    def __eq__(self, other):
+        if not isinstance(other, State):
+            return NotImplemented
+        return hash(self) == hash(other)
+
     def __hash__(self):
         if self.__hash is None:
             self.__hash = ''
-            for pos, piece in self.state.items(): self.__hash += f'{pos}{piece}'
-        return self.__hash
+            for pos in sorted(self.__state.keys()): self.__hash += f'{pos:2}{self.__state[pos]}'
+            # print(f'{self.__hash}')
+        return hash(self.__hash)
 
     def __str__(self):
         s = f'{self.__symbol(0)} {self.__symbol(1)}    '
