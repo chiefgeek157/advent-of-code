@@ -40,7 +40,7 @@ rings = [
     ('Defense +3', 80, 0, 3)
 ]
 
-min_cost = sys.maxsize
+max_cost = 0
 for weapon in range(len(weapons)):
     for armor in range(len(armors)):
         for l_ring in range(len(rings)):
@@ -51,9 +51,9 @@ for weapon in range(len(weapons)):
 
                 boss_killed_rounds = math.ceil(boss_hp / max(1, (player_damage - boss_armor)))
                 player_killed_rounds = math.ceil(player_hp / max(1, (boss_damage - player_armor)))
-                if boss_killed_rounds <= player_killed_rounds:
-                    if cost < min_cost:
-                        print(f'New min cost {cost}')
-                        min_cost = cost
+                if player_killed_rounds < boss_killed_rounds:
+                    if cost > max_cost:
+                        print(f'New max cost {cost}')
+                        max_cost = cost
 
-print(f'Ans: player won with {min_cost} gold')
+print(f'Ans: player lost with {max_cost} gold')
