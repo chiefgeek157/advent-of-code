@@ -1,40 +1,15 @@
-from abc import ABC, abstractmethod
 import copy
 import sys
 
-# Djikstra's search
-#
-# A state is a string consisting of the name of each spell capable
-# of a duration in the array order along with it's remaining duration (may be zero)
-#
-# The 'none' state has all durations at zero
-#
-# The objective function is the cost to reach the state plus
-# the boss's remaining hit points to prefer the states that
-# are closer to winning first
+play_hp = 50
+play_mana = 500
 
-# A state is composed of
-#
-# play_turn (bool)
-# play_hp
-# boss_hp
-# mana
-# shield_dur
-# poison_dur
-# recharge_dur
-#
-# A state has a cost to have reached it
-#
-# The state's sort order is cost + boss_hp
-#
-# Allowed arcs are to cast no spell or any spell
-# which is affordable and which has a duration of zero
-#
-# The cost of an arc is the cost of the spell cast
+boss_hp = 51
+boss_damage = 9
 
 
 class Effect:
-    def __init__(self, duration: int, damage: int, armor: int, heal: int, mana: int) -> None:
+    def __init__(self, duration: int, damage: int=0, armor: int=0, heal: int=0, mana: int=0) -> None:
         self.duration = duration
         self.damage = damage
         self.armor = armor
@@ -42,17 +17,18 @@ class Effect:
         self.mana = mana
 
     def use(self) -> tuple:
-        """return a tuple of (damage, armor, heal, mana, still_valid)"""
-        self.duration -= 1
-        return (self.damage, self.armor, self.heal, self.mana, (self.duration > 0))
+        """Return a tuple of (duration, damage, armor, heal, mana).
+
+        Duration is the new duration. If zero, then no longer valid."""
+        return (self.druation - 1, self.damage, self.armor, self.heal, self.mana)
 
     def __repr__(self) -> str:
         return f'Dur:{self.duration} Dam:{self.damage} Arm:{self.armor} Hea:{self.heal} Man:{self.mana}'
 
 
 class Spell:
-    def __init__(self, name: str, cost: int, damage: int, armor: int, heal: int, mana: int,
-            effect: Effect) -> None:
+    def __init__(self, name: str, cost: int, damage: int=0, armor: int=0, heal: int=0, mana: int=0,
+            effect: Effect=None) -> None:
         self.name = name
         self.cost = cost
         self.damage = damage
@@ -67,107 +43,87 @@ class Spell:
         return (self.damage, self.armor, self.heal, self.mana, self.effect)
 
 
-class Player(ABC):
-    def __init__(self, name: str, hp: int, damage: int) -> None:
-        self.name = name
+class Boss:
+    def __init__(self, hp: int, damage: int) -> None:
         self.hp = hp
         self.damage = damage
-        self.armor = 0
 
-    @abstractmethod
-    def attack(self, other: 'Player', spell: Spell=None) -> 'Player':
-        """Attack the other player and inclit change to its hp."""
-        return other
+    def attack(self, wizard: 'Wizard') -> 'Wizard':
+        """Return a new Wizard with attack applied of None if Wizard lost"""
+        new_wizard = wizard.clone()
+        new_wizard.hp -= max(1, self.damage - new_wizard.armor)
+        if new_wizard.hp <= 0:
+            new_wizard = None
+        return new_wizard
 
-
-class Boss(Player):
-    def __init__(self, hp: int, damage: int) -> None:
-        super().__init__('Boss', hp, damage)
-
-    def attack(self, other: 'Player', spell: Spell=None) -> 'Player':
-        new_player = copy.deepcopy(other)
-        new_player.hp -= max(1, self.damage - new_player.armor)
-        return new_player
+    def __repr__(self) -> str:
+        return f'Boss: hp:{self.hp} d:{self.damage}'
 
 
-class Wizard(Player):
+class Wizard:
     def __init__(self, hp: int, mana: int) -> None:
-        super().__init__('Wizard', hp, 0)
+        self.hp = hp
         self.mana = mana
+        self.damage = 0
+        self.armor = 0
         self.effects = []
 
-    def attack(self, other: 'Player') -> 'Player':
-        new_player = copy.deepcopy(other)
-        new_effects = []
+    def clone(self) -> 'Wizard':
+        new_self = Wizard(self.hp, self.mana)
+        new_self.damage = self.damage
+        new_self.armor = self.armor
+        new_self.effects = copy.deepcopy(self.effects)
+        return new_self
+
+    def attack(self, spell: Spell, boss: Boss) -> tuple:
+        """Return a tuple of (Boss, Wizard) after attack.
+
+        Boss is None if lost."""
+        new_boss = copy.copy(boss)
+        new_self = Wizard(self.hp, self.mana)
+
+        # Apply wizard effects
         for effect in self.effects:
-            damage, armor, heal, mana, valid = effect.use()
+            duration, damage, armor, heal, mana = effect.use()
 
+            # Apply to new Boss
+            new_boss.hp -= damage
+            if new_boss.hp <= 0:
+                new_boss = None
 
+            # Apply to new self
+            new_self.hp += heal
+            new_self.damage = damage
+            new_self.armor = armor
+            new_self.mana += mana
+            if duration > 0:
+                new_self.effects.append(Effect(duration, damage, armor, heal, mana))
 
-class State:
-
-    def __init__(self, play_turn: bool, play_hp: int, boss_hp:int, mana: int,
-            shield: Effect, poison: Effect, recharge: Effect) -> None:
-        self.visited = False
-        self.cost = cost
-        self.play_turn = play_turn
-        self.play_hp = play_hp
-        self.boss_hp = boss_hp
-        self.mana = mana
-        self.shield = shield
-        self.poison = poison
-        self.recharge = recharge
-
-    def weight(self):
-        return self.cost + self.boss_hp
+        return (new_boss, new_self)
 
     def __repr__(self) -> str:
-        return (f'Cost:{self.cost} Turn:{self.play_turn} PHP:{self.play_hp} BHP: {self.boss_hp}'
-            f' Mana:{self.mana} Shield:{self.shield} Poison:{self.poison} Recharge:{self.recharge}')
+        return f'Wizard: hp:{self.hp} d:{self.damage} a:{self.armor} m:{self.mana} e:{self.effects}'
 
-    def __hash__(self) -> int:
-        return hash((self.play_turn, self.play_hp, self.boss_hp, self.mana,
-            self.shield.duration, self.poison.duration, self.recharge.duration))
-class Node:
-
-    __nodes = set()
-
-    @classmethod
-    def get(cls, cost, play_turn: bool, play_hp: int, boss_hp:int, mana: int,
-            shield: Effect, poison: Effect, recharge: Effect) -> 'Node':
-        node = Node(cost, play_turn, play_hp, boss_hp, mana, shield, poison, rechargey)
-        if node not in cls.__nodes:
-            cls.__nodes.add(node)
-        return node
-
-    def __init__(self, cost, play_turn: bool, play_hp: int, boss_hp:int, mana: int,
-            shield: Effect, poison: Effect, recharge: Effect) -> None:
-        self.visited = False
-        self.cost = cost
-        self.play_turn = play_turn
-        self.play_hp = play_hp
-        self.boss_hp = boss_hp
-        self.mana = mana
-        self.shield = shield
-        self.poison = poison
-        self.recharge = recharge
-
-    def weight(self):
-        return self.cost + self.boss_hp
-
-    def __repr__(self) -> str:
-        return (f'Cost:{self.cost} Turn:{self.play_turn} PHP:{self.play_hp} BHP: {self.boss_hp}'
-            f' Mana:{self.mana} Shield:{self.shield} Poison:{self.poison} Recharge:{self.recharge}')
-
-    def __hash__(self) -> int:
-        return hash((self.play_turn, self.play_hp, self.boss_hp, self.mana,
-            self.shield.duration, self.poison.duration, self.recharge.duration))
-
-play_hp = 50
-play_mana = 500
-
-boss_hp = 51
-boss_damage = 9
+def play_round(wizard_turn: bool, wizard: Wizard, boss: Boss, total_mana):
+    """Play a round, returning the amount of mana used if Wizard won, or None."""
+    print(f'Round: {wizard_turn} {wizard}, {boss}, mana:{total_mana}')
+    if wizard_turn:
+        for spell in spells:
+            if wizard.mana >= spell.cost:
+                total_mana += spell.cost
+                new_boss, new_wizard = wizard.attack(spell, boss)
+                if not new_boss:
+                    print('Wizard won')
+                elif not new_wizard:
+                    print(f'Boss won with {total_mana} mana')
+                else:
+                    play_round(not wizard_turn, new_wizard, new_boss, total_mana)
+    else:
+        new_wizard = boss.attack(wizard)
+        if not new_wizard:
+            print("Boss won")
+        else:
+            play_round(not wizard_turn, new_wizard, boss, total_mana)
 
 spells = [
     Spell('Magic Missle', cost=53, damage=4),
@@ -177,18 +133,84 @@ spells = [
     Spell('Recharge', cost=229, effect=Effect(duration=5, mana=101))
 ]
 
-min_mana = sys.maxsize
-# Initialize work to a None spell
-work = set()
-initial = Node.get(True, play_hp, boss_hp, play_mana, 0, 0, 0)
-print(f'INitial state: {initial}')
-work.add(initial)
-while work:
-    # Get the least expensive option
-    node = sorted(work, key=lambda x: x.weight())[0]
-    work.remove(node)
-    print(f'Node: {node}')
-    node.visited = True
+wizard = Wizard(play_hp, play_mana)
+boss = Boss(boss_hp, boss_damage)
+print(f'START: {wizard} {boss}')
 
-    for spell in spells:
-        neighbor = Node.get()
+play_round(True, wizard, boss, 0)
+
+# min_mana = sys.maxsize
+
+
+# work = set()
+# initial = Node.get(True, play_hp, boss_hp, play_mana, 0, 0, 0)
+# print(f'INitial state: {initial}')
+# work.add(initial)
+# while work:
+#     # Get the least expensive option
+#     node = sorted(work, key=lambda x: x.weight())[0]
+#     work.remove(node)
+#     print(f'Node: {node}')
+#     node.visited = True
+
+#     for spell in spells:
+#         neighbor = Node.get()
+
+# class State:
+
+#     def __init__(self, play_turn: bool, play_hp: int, boss_hp:int, mana: int,
+#             shield: Effect, poison: Effect, recharge: Effect) -> None:
+#         self.visited = False
+#         self.cost = cost
+#         self.play_turn = play_turn
+#         self.play_hp = play_hp
+#         self.boss_hp = boss_hp
+#         self.mana = mana
+#         self.shield = shield
+#         self.poison = poison
+#         self.recharge = recharge
+
+#     def weight(self):
+#         return self.cost + self.boss_hp
+
+#     def __repr__(self) -> str:
+#         return (f'Cost:{self.cost} Turn:{self.play_turn} PHP:{self.play_hp} BHP: {self.boss_hp}'
+#             f' Mana:{self.mana} Shield:{self.shield} Poison:{self.poison} Recharge:{self.recharge}')
+
+#     def __hash__(self) -> int:
+#         return hash((self.play_turn, self.play_hp, self.boss_hp, self.mana,
+#             self.shield.duration, self.poison.duration, self.recharge.duration))
+# class Node:
+
+#     __nodes = set()
+
+#     @classmethod
+#     def get(cls, cost, play_turn: bool, play_hp: int, boss_hp:int, mana: int,
+#             shield: Effect, poison: Effect, recharge: Effect) -> 'Node':
+#         node = Node(cost, play_turn, play_hp, boss_hp, mana, shield, poison, rechargey)
+#         if node not in cls.__nodes:
+#             cls.__nodes.add(node)
+#         return node
+
+#     def __init__(self, cost, play_turn: bool, play_hp: int, boss_hp:int, mana: int,
+#             shield: Effect, poison: Effect, recharge: Effect) -> None:
+#         self.visited = False
+#         self.cost = cost
+#         self.play_turn = play_turn
+#         self.play_hp = play_hp
+#         self.boss_hp = boss_hp
+#         self.mana = mana
+#         self.shield = shield
+#         self.poison = poison
+#         self.recharge = recharge
+
+#     def weight(self):
+#         return self.cost + self.boss_hp
+
+#     def __repr__(self) -> str:
+#         return (f'Cost:{self.cost} Turn:{self.play_turn} PHP:{self.play_hp} BHP: {self.boss_hp}'
+#             f' Mana:{self.mana} Shield:{self.shield} Poison:{self.poison} Recharge:{self.recharge}')
+
+#     def __hash__(self) -> int:
+#         return hash((self.play_turn, self.play_hp, self.boss_hp, self.mana,
+#             self.shield.duration, self.poison.duration, self.recharge.duration))
