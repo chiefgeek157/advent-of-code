@@ -54,6 +54,7 @@ class Boss:
         new_wizard.hp -= max(1, self.damage - new_wizard.armor)
         if new_wizard.hp <= 0:
             new_wizard = None
+
         return new_wizard
 
     def __repr__(self) -> str:
