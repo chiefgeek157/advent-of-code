@@ -48,19 +48,11 @@ class Boss:
 
         # Clone the Wizard and apply effects
         new_wizard = wizard.clone()
-        effects_damage, effects_armor = new_wizard.apply_effects()
+        new_wizard.hp -= max(1, self.damage - new_wizard.armor)
+        if new_wizard.hp <= 0:
+            new_wizard = None
 
-        # Wizard effects cause damage every melee
-        new_boss.hp -= effects_damage
-        if new_boss.hp <= 0:
-            new_boss = None
-        else:
-            # Attack the new Wizard
-            new_wizard.hp -= max(1, new_boss.damage - effects_armor)
-            if new_wizard.hp <= 0:
-                new_wizard = None
-
-        return (new_wizard, new_boss)
+        return new_wizard
 
     def __repr__(self) -> str:
         return f'Boss: hp:{self.hp} d:{self.damage}'
