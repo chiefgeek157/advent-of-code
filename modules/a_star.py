@@ -12,18 +12,17 @@ def a_star(start, final, f_neighbors, f_heuristic) -> tuple:
         f(x) = g(x) + h(x)
 
     where f is the score of node x, g is the cumulatrive score for the path
-    leading from start to x, and h is a heuristic estimate of the distance from x
-    to final.
+    leading from start to x, and h is a heuristic estimate of the distance
+    from x to final.
 
     start: the starting node, not eveluated except it must be hashable.
     final: the final node to seek, not eveluated except it must be hashable.
-    f_neighbors: a function that will return a list of all neighbors of the given
-        state as a tuple (node, d). d is any non-negative value
+    f_neighbors: a function that will return a list of all neighbors of the
+        given state as a tuple (node, d). d is any non-negative value
         reflecting the distance from node to the neighbor.
-    f_heuristic: the h function that will compute the heuristic value for the given node,
-        which must be a non-negative value. Note that this function does not cache
-        the heuristic values unless cache_h is True. It is assumed the caller will
-        cache them as needed.
+    f_heuristic: the h function that will compute the heuristic value for
+        the given node, which must be a non-negative value. Note that this
+        function does not cache the heuristic values locally.
     """
     # A cache of g_scores for each node so they can be found and compared
     # when a node is visited
@@ -40,7 +39,8 @@ def a_star(start, final, f_neighbors, f_heuristic) -> tuple:
     priority_queue = []
     hq.heappush(priority_queue, (f_score, start))
 
-    # We keep a second set to ascertain if a node is already in the priority queue
+    # We keep a second set to ascertain if a node is already in the priority
+    # queue
     queued_nodes = set()
     queued_nodes.add(start)
 
@@ -85,7 +85,7 @@ def a_star(start, final, f_neighbors, f_heuristic) -> tuple:
                 # Make sure we do not queue twice at the same time
                 # Potentially queued again later
                 if next_node not in queued_nodes:
-                    hq.heappush(priority_queue, (f_score, next_node))
+                    hq.heappush(priority_queue, (next_f_score, next_node))
                     queued_nodes.add(next_node)
 
     # Failed to find the final node before we ran out of nodes to visit
@@ -99,6 +99,6 @@ def a_star(start, final, f_neighbors, f_heuristic) -> tuple:
     while next:
         min_path.append(next)
         next = predecessors[next]
-    min_path = reversed(min_path)
+    min_path = min_path[::-1]
 
     return (min_score, min_path)
