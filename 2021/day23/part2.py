@@ -39,41 +39,6 @@ def move_piece(node, pos, new_pos):
     node_list[pos] = '.'
     return ''.join(node_list)
 
-def check_path(node, col_start, hall_end, homes=False):
-    """Check a path from a pos in a column to a pos in the
-    hall.
-
-    If homes is True, do not count positions with the correct
-    home piece already present, which is used when moving from the
-    hall into the home.
-    """
-    clear = True
-    steps = 0
-
-    # Check path to top of column
-    steps = 0
-    j = col_start - 4
-    while j > 10:
-        if node[j] != '.':
-            if homes and node[j] != node[hall_end]:
-            clear = False
-            break
-        j -= 4
-        steps += 1
-    j = j - 2 - (10 - j)
-    if clear:
-        # Check path from j (position in hall) to new_pos
-        if new_pos < j:
-            iter = reversed(range(new_pos, j + 1))
-        else:
-            iter = range(j, new_pos + 1)
-        for k in iter:
-            steps += 1
-            if node[k] != '.':
-                clear = False
-                break
-    return (clear, steps)
-
 def get_nodes(node):
     """Return a list of tuples (node, dist)"""
     nodes = []
@@ -84,16 +49,39 @@ def get_nodes(node):
                 # assigned column above only other homed items and only
                 # if the path is clear
                 clear = True
-                hall_pos = 2 + 2 * home_cols[node[pos]]
-                if pos < hall_pos:
-                    iter = reversed(range(pos, hall_pos + 1))
+                top_pos = 2 + 2 * home_cols[node[pos]]
+                if pos < top_pos:
+                    iter = reversed(range(pos, top_pos + 1))
                 else:
                     iter = range(j, new_pos + 1)
-                for k in iter:
+                for hall_pos in iter:
                     steps += 1
-                    if node[k] != '.':
+                    if node[hall_pos] != '.':
                         clear = False
                         break
+                if clear:
+                    # now move down the column
+                    col_pos = 10 + 2 * home_cols[node[pos]]
+                    num_rows = int((len(node) - 10) % 4)
+                    new_pos = None
+                    for row in range(num_rows):
+                        if col_pos == '.':
+                            # This is a candidate
+                            new_pos = col_pos
+                        elif col_pos == node[pos]:
+                            # OK to be occupied by the same piece if row
+                            # greater than zero
+                            if row == 0:
+                                clear = False
+                                break
+                        else:
+                            # Found a piece that is not the same
+                            clear = False
+                            break
+                    if clear:
+                        new_node = move_piece(node, pos, new_pos)
+                        dist = steps * move_costs[node[pos]]
+                        nodes.append((new_node, dist))
             else:
                 # In a column, can only move into the hallway to one
                 # of the available spots if the path above is clear
