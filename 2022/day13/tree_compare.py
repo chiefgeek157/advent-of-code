@@ -1,3 +1,5 @@
+from functools import cmp_to_key
+
 # filename = '2022/day13/test1.txt'
 filename = '2022/day13/input.txt'
 
@@ -44,7 +46,7 @@ def parse_line(line):
 
 # exit()
 
-def compare(p1, p2, level):
+def compare(p1, p2, level=0):
     print(f'{"  "*level}- Compare {p1} vs {p2}')
     matched = None
     if isinstance(p1, list):
@@ -54,10 +56,10 @@ def compare(p1, p2, level):
             while matched is None:
                 if i == len(p1) and i < len(p2):
                     print(f'{"  "*(level+1)}- Left side ran out of items, so inputs are in the right order')
-                    matched = True
+                    matched = -1
                 elif i == len(p2) and i < len(p1):
                     print(f'{"  "*(level+1)}- Right side ran out of items, so inputs are NOT in the right order')
-                    matched = False
+                    matched = 1
                 elif i < len(p1) and i < len(p2):
                     c1 = p1[i]
                     c2 = p2[i]
@@ -78,16 +80,17 @@ def compare(p1, p2, level):
             # Both are values
             if p1 < p2:
                 print(f'{"  "*(level+1)}- Left side is smaller, so inputs are in the right order')
-                matched = True
+                matched = -1
             elif p1 > p2:
                 print(f'{"  "*(level+1)}- Right side is smaller, so inputs are NOT in the right order')
-                matched = False
+                matched = 1
             # Else keep going
 
     return matched
 
 sum_indices = 0
 i = 0
+packets = []
 with open(filename, 'r') as f:
     line1 = f.readline()
     if line1:
@@ -100,7 +103,9 @@ with open(filename, 'r') as f:
         print(f'\n== Pair {i} ==')
         p1 = parse_line(line1)
         p2 = parse_line(line2)
-        if compare(p1, p2, 0):
+        packets.append(p1)
+        packets.append(p2)
+        if compare(p1, p2, 0) < 0:
             sum_indices += i
 
         line1 = f.readline()
@@ -110,3 +115,19 @@ with open(filename, 'r') as f:
             line2 = f.readline()
 
 print(f'Part1: {sum_indices}')
+
+packets.append([[2]])
+packets.append([[6]])
+
+sorted_packets = sorted(packets, key=cmp_to_key(compare))
+
+print(f'Sorted packets:')
+product = 1
+i = 1
+for packet in sorted_packets:
+    if packet == [[2]] or packet == [[6]]:
+        product *= i
+    print(packet)
+    i += 1
+
+print(f'Part 2: {product}')
