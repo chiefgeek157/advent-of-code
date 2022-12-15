@@ -1,10 +1,7 @@
 from modules.a_star import a_star
 
-start = '...........BACDABCDABCDABCD'
-final = '...........ABCDABCDABCDABCD'
-
-move_costs = {'A': 1, 'B': 10, 'C': 100, 'D': 1000}
-home_cols = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+move_costs = {'A': 1, 'B': 10, 'C': 100, 'D': 1000, 'a': 1, 'b': 10, 'c': 100, 'd': 1000}
+home_cols = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'a':0, 'b': 1, 'c': 2, 'd': 3}
 
 def print_board(node):
     print("\n#############")
@@ -16,6 +13,26 @@ def print_board(node):
         line += '#'
         print(line)
     print('  #########')
+
+def classify(node):
+    """Return a new node string with piece changed to lowercase
+    if NOT in their home positions already."""
+    num_rows = int((len(node) - 11) / 4)
+    new_node = ''
+    for pos in reversed(range(len(node))):
+        c = node[pos]
+        if pos < 11:
+            # No pieces can be in their home posisitons if in the hallway
+            new_node += c.lower()
+        else:
+            row = int((pos - 11) / 4) + 1
+            col = (pos - 11) % 4
+            if (c != '.' and col == home_cols[c]
+                and (row == num_rows or new_node[len(node) - pos - 5].isupper())):
+                new_node += c.upper()
+            else:
+                new_node += c.lower()
+    return new_node[::-1]
 
 def heuristic(node):
     global home_cols, move_costs
@@ -37,61 +54,69 @@ def move_piece(node, pos, new_pos):
     node_list = list(node)
     node_list[new_pos] = node[pos]
     node_list[pos] = '.'
-    return ''.join(node_list)
+    return classify(''.join(node_list))
 
 def get_nodes(node):
     """Return a list of tuples (node, dist)"""
     nodes = []
     for pos in range(len(node)):
-        if node[pos] != '.':
+        piece = node[pos]
+        if piece != '.':
+            # See how we can move the piece at pos
             if pos < 11:
                 # In the hallway, can only move to the bottom of the
                 # assigned column above only other homed items and only
                 # if the path is clear
                 steps = 0
                 clear = True
-                col_pos = 2 + 2 * home_cols[node[pos]]
-                if pos < col_pos:
-                    iter = range(pos + 1, col_pos + 1)
+                steps = 0
+                top_pos = 2 + 2 * home_cols[piece]
+                if pos < top_pos:
+                    iter = range(pos + 1, top_pos + 1)
                 else:
-                    iter = reversed(range(col_pos, pos))
+                    iter = reversed(range(top_pos, pos))
                 for hall_pos in iter:
+                    hall_piece = node[hall_pos]
                     steps += 1
-                    if node[hall_pos] != '.':
+                    if hall_piece != '.':
                         clear = False
                         break
                 if clear:
-                    # Check the first move down
-                    if node[col_pos + 4] != '.':
-                        clear = False
-                        break
-                    col_pos += 4
-                    steps += 1
-
-                    # Continue down the column, looking down one spot
+                    # now move down the column
+                    col_pos = 11 + home_cols[piece]
+                    num_rows = int((len(node) - 11) / 4)
                     new_pos = None
-                    while col_pos + 4 < len(node):
-                        if node[col_pos + 4] == node[pos]:
-                            # Piece below is a homed piece
-                            # Keep going looking for mismatched pieces
-                            if new_pos == None:
-                                new_pos = col_pos
-                        elif node[col_pos + 4] != '.':
-                            # A mismatched piece
+                    for row in range(num_rows):
+                        col_piece = node[col_pos]
+                        if col_piece == '.':
+                            # This is a candidate
+                            new_pos = col_pos
+                            steps += 1
+                        elif col_piece == piece.upper():
+                            # OK for next spot to be occupied by the same piece if row
+                            # greater than zero
+                            if row == 0:
+                                clear = False
+                                break
+                            else:
+                                # Next piece down is already home, so place in
+                                # the row above
+                                break
+                        else:
+                            # Found a piece that is not the same
                             clear = False
                             break
                         col_pos += 4
-                        steps += 1
-
                     if clear:
                         new_node = move_piece(node, pos, new_pos)
-                        dist = steps * move_costs[node[pos]]
+                        dist = steps * move_costs[piece]
                         nodes.append((new_node, dist))
-            else:
+            elif piece.islower():
+                # Only applicable for nodes NOT in the home position
                 # In a column, can only move into the hallway to one
                 # of the available spots if the path above is clear
-                clear = True
                 for new_pos in [0, 1, 3, 5, 7, 9, 10]:
+                    clear = True
                     # Check path to top of column
                     steps = 0
                     col_pos = pos - 4
@@ -120,6 +145,12 @@ def get_nodes(node):
                         nodes.append((new_node, dist))
     return nodes
 
+start = classify('...........BACDABCDABCDABCD')
+start = classify('...........BACDABCDABCDABCD')
+# print_board(start)
+final = classify('...........ABCDABCDABCDABCD')
+# print_board(final)
+
 # print_board(start)
 # print_board(final)
 # print(f'heuristic({final}): {heuristic(final)}')
@@ -132,8 +163,13 @@ def get_nodes(node):
 # print_board(node)
 # print(f'heuristic({node}): {heuristic(node)}')
 
-node = '.A..........BCDABCDABCDABCD'
-print(f'get_nodes({node}): {get_nodes(node)}')
+# node = classify('A.........B..CDABCDABCDABDC')
+# print_board(node)
+# neighbors = get_nodes(node)
+# print(f'get_nodes({node})')
+# for node, score in neighbors:
+#     print_board(node)
+#     print(f'Score: {score}')
 
-# min_score, min_path = a_star(start, final, neighbors, heuristic)
-# print(f'Part 2: {min_score}')
+min_score, min_path = a_star(start, final, get_nodes, heuristic)
+print(f'Part 2: {min_score}')
