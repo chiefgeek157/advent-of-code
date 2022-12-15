@@ -67,6 +67,7 @@ def get_nodes(node):
                 # In the hallway, can only move to the bottom of the
                 # assigned column above only other homed items and only
                 # if the path is clear
+                steps = 0
                 clear = True
                 steps = 0
                 top_pos = 2 + 2 * home_cols[piece]
@@ -118,35 +119,57 @@ def get_nodes(node):
                     clear = True
                     # Check path to top of column
                     steps = 0
-                    j = pos - 4
-                    while j > 10:
-                        if node[j] != '.':
+                    col_pos = pos - 4
+                    while col_pos > 10:
+                        if node[col_pos] != '.':
                             clear = False
                             break
-                        j -= 4
+                        col_pos -= 4
                         steps += 1
-                    j = j - 2 - (10 - j)
+                    col_pos = col_pos - 2 - (10 - col_pos)
                     if clear:
-                        # Check path from j (position in hall) to new_pos
-                        if new_pos < j:
-                            iter = reversed(range(new_pos, j + 1))
+                        # Check path from col_pos to new_pos
+                        if new_pos < col_pos:
+                            iter = reversed(range(new_pos, col_pos + 1))
                         else:
-                            iter = range(j, new_pos + 1)
-                        for k in iter:
+                            iter = range(col_pos, new_pos + 1)
+                        for hall_pos in iter:
                             steps += 1
-                            if node[k] != '.':
+                            if node[hall_pos] != '.':
                                 clear = False
                                 break
+
                     if clear:
                         new_node = move_piece(node, pos, new_pos)
                         dist = steps * move_costs[node[pos]]
                         nodes.append((new_node, dist))
     return nodes
 
-start = classify('...........BACDABCDABCDABCD')
-start = classify('...........BACDABCDABCDABCD')
-# print_board(start)
-final = classify('...........ABCDABCDABCDABCD')
+# input
+start = classify(
+    '...........'
+        'BBCD'
+        'DAAC'
+)
+# test 1
+# start = classify(
+#     '...........'
+#         'BCBD'
+#         'ADCA'
+# )
+
+final = classify('...........ABCDABCD')
+
+part2 = True
+
+if part2:
+    start = (start[:15] +
+    'DCBA'
+    'DBAC'
+    + start[15:])
+    start = classify(start)
+    final = classify('...........ABCDABCDABCDABCD')
+
 # print_board(final)
 
 # print_board(start)
