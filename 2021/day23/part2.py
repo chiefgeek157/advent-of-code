@@ -145,10 +145,31 @@ def get_nodes(node):
                         nodes.append((new_node, dist))
     return nodes
 
-start = classify('...........BACDABCDABCDABCD')
-start = classify('...........BACDABCDABCDABCD')
-# print_board(start)
-final = classify('...........ABCDABCDABCDABCD')
+# input
+start = classify(
+    '...........'
+        'BBCD'
+        'DAAC'
+)
+# test 1
+# start = classify(
+#     '...........'
+#         'BCBD'
+#         'ADCA'
+# )
+
+final = classify('...........ABCDABCD')
+
+part2 = True
+
+if part2:
+    start = (start[:15] +
+    'DCBA'
+    'DBAC'
+    + start[15:])
+    start = classify(start)
+    final = classify('...........ABCDABCDABCDABCD')
+
 # print_board(final)
 
 # print_board(start)
