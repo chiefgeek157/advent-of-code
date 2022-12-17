@@ -70,6 +70,20 @@ def alu(instructions, input):
         print(f'    - {reg}')
     return reg
 
+inst = []
+part2 = False
+with open(filename, 'r') as f:
+    line = f.readline()
+    while line:
+        fields = line.split()
+        inst = [fields[0]]
+        match fields[0]:
+            case 'inp':
+                pass
+            case _:
+                inst.append(fields[1])
+                inst.append(fields[2])
+        line = f.readline()
 
 max_iter = 1
 iter = 0
