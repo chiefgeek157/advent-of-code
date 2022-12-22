@@ -1,4 +1,5 @@
 # filename = '2022/day21/test1.txt'
+# filename = '2022/day21/test2.txt'
 filename = '2022/day21/input.txt'
 
 funcs = {
@@ -18,11 +19,19 @@ inv_funcs = {
 jobs = {}
 parents = {}
 
+def print_job(name, level):
+    job = jobs[name]
+    print(f'{"|--" * level}{name}: {job}')
+    if len(job) > 1:
+        print_job(job[1], level + 1)
+    if len(job) > 2:
+        print_job(job[2], level + 1)
+
 def get_result(m):
-    print(f'Getting results for {m}')
+    # print(f'Getting results for {m}')
     job = jobs[m]
     if len(job) == 1:
-        print(f'  - {m} is const {job[0]}')
+        # print(f'  - {m} is const {job[0]}')
         return job[0]
     else:
         arg1 = get_result(job[1])
@@ -46,8 +55,7 @@ with open(filename, 'r') as f:
 
         line = f.readline()
 
-for k, v in jobs.items():
-    print(f'Job {k}: {v}')
+print_job('root', 0)
 
 res = get_result('root')
 
@@ -56,20 +64,20 @@ print(f'\nPart 1: {res}')
 # Re-balance the tree from 'humn'
 
 def get_humn_result(m):
-    print(f'Getting INV results for {m}')
+    # print(f'Getting INV results for {m}')
     if m in humn_jobs:
         job = humn_jobs[m]
-        print(f'  - {m} is an inverse node {job}')
+        # print(f'  - {m} is an inverse node {job}')
         arg1 = get_humn_result(job[1])
         if job[0] == '=':
             res = arg1
-            print(f'  - {m} INV returns = {res}')
+            # print(f'  - {m} INV returns = {res}')
         else:
             arg2 = get_humn_result(job[2])
             res = int(funcs[job[0]](arg1, arg2))
             print(f'  - {m} INV returns {arg1} {job[0]} {arg2} = {res}')
     else:
-        print(f'  - {m} is a regular node')
+        # print(f'  - {m} is a regular node')
         res = get_result(m)
 
     return res
@@ -77,31 +85,51 @@ def get_humn_result(m):
 humn_jobs = {}
 name = 'humn'
 while name != 'root':
-    print(f'Visiting {name}')
+    # print(f'Visiting {name}')
     job = jobs[name]
     parent_name = parents[name]
-    print(f'  - Parent is {parent_name}')
+    # print(f'  - Parent is {parent_name}')
     parent = jobs[parent_name]
     # Special handling of root
     if parent_name == 'root':
-        print(f'  - Handling root')
+        # print(f'  - Handling root')
         if name == parent[1]:
             new_job = ['=', parent[2]]
         else:
             new_job = ['=', parent[1]]
     else:
         if name == parent[1]:
-            print(f'  - Child is arg1')
+            # print(f'  - Child is arg1')
             new_job = [inv_funcs[parent[0]], parent_name, parent[2]]
         else:
-            print(f'  - Child is arg2')
-            new_job = [inv_funcs[parent[0]], parent_name, parent[1]]
+            # print(f'  - Child is arg2')
+            if parent[0] == '+' or parent[0] == '*':
+                new_job = [inv_funcs[parent[0]], parent_name, parent[1]]
+            else:
+                new_job = [parent[0], parent[1], parent_name]
     humn_jobs[name] = new_job
+    # print(f'  - Added new job {name}: {new_job}')
     name = parent_name
 
+def print_humn_job(name, level):
+    job = humn_jobs.get(name, jobs[name])
+    print(f'{"|--" * level}{name}: {job}')
+    if len(job) > 1:
+        print_humn_job(job[1], level + 1)
+    if len(job) > 2:
+        print_humn_job(job[2], level + 1)
+
+print(f'\nhumn jobs\n')
+print_humn_job('humn', 0)
+print()
 res = get_humn_result('humn')
 
 print(f'\nPart 2: {res}')
+
+# Test
+
+# jobs['humn'][0] = res
+# res = get_result('root')
 
 # # Find 'humn'
 # stack = [jobs['root'][1]]

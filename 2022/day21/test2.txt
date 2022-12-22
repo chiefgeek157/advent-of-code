@@ -1,0 +1,5 @@
+root: aaaa + bbbb
+aaaa: 40
+bbbb: cccc * humn
+cccc: 20
+humn: 10
