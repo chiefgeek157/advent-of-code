@@ -2,118 +2,138 @@
 filename = '2022/day17/input.txt'
 
 blocks = [
-    [[1, 1, 1, 1]],
-    [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
-    [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
-    [[1], [1], [1], [1]],
-    [[1, 1], [1, 1]]
+    [(0+0j), (1+0j), (2+0j), (3+0j)],
+    [(1+0j), (0+1j), (1+1j), (2+1j), (1+2j)],
+    [(0+0j), (1+0j), (2+0j), (2+1j), (2+2j)],
+    [(0+0j), (0+1j), (0+2j), (0+3j)],
+    [(0+0j), (1+0j), (0+1j), (1+1j)]
 ]
 
 jets = ''
 with open(filename, 'r') as f:
     jets = f.readline()
 
-def intersects(block, pos):
-    h = len(block)
-    w = len(block[0])
-    if pos[1] < 0:
-        # Hit the bottom
-        return True
-    if pos[1] >= len(board):
-        # Have not hit the top of the board yet
-        return False
-    for i in range(h):
-        y = pos[1] + i
-        if y >= len(board):
-            return False
-        for j in range(w):
-            x = pos[0] + j
-            if block[i][j] == 1 and board[y][x] == 1:
-                return True
-    return False
+# # Find patterns in jets
+# for l in range(2, int(len(jets) / 2) + 1):
+#     print(f'Checking repeat at length {l}')
+#     if len(jets) % l != 0:
+#         print(f'{l} is not a factor of {len(jets)}')
+#         continue
+#     matches = True
+#     for i in range(int(len(jets) / l)):
+#         for j in range(l):
+#             if jets[j] != jets[i * l + j]:
+#                 print(f'For pattern length {l}, [{j}] {jets[j]} != [{i * l + j}] {jets[i * l + j]}')
+#                 matches = False
+#                 break
+#         if not matches:
+#             break
+#     if matches:
+#         print(f'Found a repeat at length {l}')
 
-def fix(block, pos):
-    h = len(block)
-    w = len(block[0])
-    for i in range(h):
-        y = pos[1] + i
-        if y == len(board):
-            board.append([0] * 7)
-        for j in range(w):
-            x = pos[0] + j
-            board[y][x] = block[i][j]
+def intersects(board, block):
+    return (b in board for b in block)
 
-def print_all(block, pos):
-    y_max = max(len(board), pos[1] + len(block))
-    for y in range(y_max - 1, -1, -1):
-        line = '|'
-        for x in range(7):
-            if (x >= pos[0] and x < pos[0] + len(block[0])
-                and y >= pos[1] and y < pos[1] + len(block)):
-                if block[y - pos[1]][x - pos[0]] == 1:
-                    line += '@'
-                else:
-                    if y < len(board):
-                        if board[y][x] == 1:
-                            line += '#'
-                        else:
-                            line += '.'
-                    else:
-                        line += '.'
-            elif y < len(board):
-                if board[y][x] == 1:
-                    line += '#'
-                else:
-                    line += '.'
-            else:
-                line += '.'
-        line += '|'
+def fix(board, block):
+    for b in block:
+        board.add(block)
+
+def print_window(block=[]):
+    y_max = int(max([b.imag for b in (board + block)]))
+    y_min = int(max(-1, min(top.imag,
+        min([b.imag for b in block], default=top.imag)) - 8))
+    for y in range(y_max, y_min - 1, -1):
+        if y == -1:
+            line = '+-------+'
+        else:
+            line = '|'
+            for x in range(7):
+                pos = complex(x, y)
+                line += '@' if pos in block else '#' if pos in board else '.'
+            line += '|'
         print(line)
-    print('+-------+')
+
+def print_all(block=[]):
+    y_max = int(max([b.imag for b in (board + block)]))
+    for y in range(y_max, -1 - 1, -1):
+        if y == -1:
+            line = '+-------+'
+        else:
+            line = '|'
+            for x in range(7):
+                pos = complex(x, y)
+                line += '@' if pos in block else '#' if pos in board else '.'
+            line += '|'
+        print(line)
 
 board = []
 count = 0
-block_num = 0
+top = (0-0j)
 jet_uses = 0
-while count < 2022:
+states = []
+repeats = []
+repeat_tops = []
+filled_repeats = False
+repeating = False
+# A state is (block, jet, col_depth) where col_depth is the count
+# down from top
+while count < 2022 and not filled_repeats:
     block = blocks[count % len(blocks)]
-    h = len(block)
-    w = len(block[0])
-    pos = (2, len(board) + 3)
+    pos = top + (2+3j)
+    block = [b + pos for b in block]
+
     # print(f'\nA new block falls')
-    # print_all(block, pos)
-    down = False
+    # print_window(block)
     while True:
-        if down:
-            new_pos = (pos[0], pos[1] - 1)
-            if intersects(block, new_pos):
-                # print(f'\nBlock stops falling')
-                fix(block, pos)
-                # print_all(block, pos)
-                break
-            # print(f'\nBlock falls 1 unit')
-            down = False
+
+        # Move left of right
+        move = (1+0j) if jets[jet_uses % len(jets)] == '>' else (-1+0j)
+        new_block = [b + move for b in block]
+        if not any([b in board or b.real < 0 or b.real > 6 for b in new_block]):
+            block = new_block
+        # print(f'\nAfter jet')
+        # print_window(block)
+
+        # Now move down
+        new_block = [b + (0-1j) for b in block]
+        if not any([b in board or b.imag < 0 for b in new_block]):
+            block = new_block
+            # print(f'\nAfter down')
+            # print_window(block)
         else:
-            jet = jets[jet_uses % len(jets)]
-            if jet == '>':
-                # print(f'\nJet pushes right')
-                new_pos = (min(7 - w, pos[0] + 1), pos[1])
+            # Block can no longer move
+            board += block
+            top = complex(0, max([b.imag for b in board]) + 1)
+            # print(f'\nAfter block stops, top now {top}')
+            # print_window()
+
+            # Look for a repeating pattern
+            cols = [list(filter(lambda p: p.real == x, board)) for x in range(7)]
+            col_depths = [int(top.imag - max([p.imag for p in cols[x]], default=0) - 1) for x in range(7)]
+            state = ((count % len(blocks)), jets[jet_uses % len(jets)], col_depths)
+            if state in states:
+                if repeating:
+                    if state in repeats:
+                        print(f'Found first repeat of repeats {state}')
+                        filled_repeats = True
+                    else:
+                else:
+                    print(f'Starting list of repeats {state}')
+                    repeating = True
+                    repeats.append(state)
+                    repeat_tops.append(int(top.imag))
             else:
-                # print(f'\nJet pushes left')
-                new_pos = (max(0, pos[0] -1), pos[1])
-            if intersects(block, new_pos):
-                # print(f'\nCannot move due to another block')
-                fix(block, pos)
-                break
-                # new_pos = pos
-            down = True
-            jet_uses += 1
-        pos = new_pos
-        # print_all(block, pos)
+                print(f'Adding new state {state}')
+                states.append(state)
+            break
+
+        jet_uses += 1
     count += 1
 
-print(f'Part 1: {len(board)}')
+# print_all()
+# print(f'Part 1: {int(top.imag)}')
 
-# 3129 was too low
-# 3394 was too high difference was whether sliding into a block prevents vertical motion
-# ry detecting if vertical motion is still allowed (the '+' in particlar)
+print(f'Ready to fill the remainder with repeats from {count}')
+
+print(f'Repeats: {repeats}')
+print(f'Tops: {repeat_tops}')
