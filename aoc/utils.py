@@ -111,3 +111,30 @@ def union1d(extents, seg):
 #         extents = bound1d(extents, seg[1])
 #         new_extents = [extents]
 #     return new_extents
+
+def complex_min(*args: complex) -> complex:
+    """Return a complex number that is the min of each component.
+
+    This treats complex numbers as cartesian coordiantes.
+    """
+    return complex(min([c.real for c in args]), min([c.imag for c in args]))
+
+def complex_max(*args: complex) -> complex:
+    """Return a complex number that is the max of each component.
+
+    This treats complex numbers as cartesian coordiantes.
+    """
+    return complex(max([c.real for c in args]), max([c.imag for c in args]))
+
+def complex_bounds(b: tuple[complex, complex], p: complex):
+    """Update the given bounds to include p.
+
+    If b is None, returns (p, p)
+    """
+    if b is None:
+        return (p, p)
+    return (complex_min(b[0], p), complex_max(b[1], p))
+
+def complex_area(b: tuple[complex, complex]) -> int:
+    """Return the area enclosed by the given bounds."""
+    return int(b[1].real - b[0].real + 1) * int(b[1].imag - b[0].imag + 1)
