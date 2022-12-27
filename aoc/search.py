@@ -7,6 +7,7 @@ from typing import Callable, Hashable
 # Type aliases for clarity
 Node = Hashable
 SearchResult = tuple[int, list[Node]]
+FinalFunc = Callable[[Node], bool]
 NeighborFunc = Callable[[Node, int], list[tuple[Node, int|float]]]
 HeuristicFunc = Callable[[Node, int], int|float]
 
@@ -139,7 +140,7 @@ def djikstra(start: Node, f_neighbors: NeighborFunc) -> SearchResult:
 
     return (min_score, min_path)
 
-def a_star(start: Node, final: Node, f_neighbors: NeighborFunc,
+def a_star(start: Node, f_final: FinalFunc, f_neighbors: NeighborFunc,
         f_heuristic: HeuristicFunc) -> SearchResult:
     """Return the min score and min path from start node to final node.
 
@@ -187,11 +188,13 @@ def a_star(start: Node, final: Node, f_neighbors: NeighborFunc,
     min_score = None
     while priority_queue:
 
+        # print(f'Priority queue length {len(priority_queue)}')
+
         # The min heap always return the lowest item in the queue
         f_score, node = hq.heappop(priority_queue)
         queued_nodes.remove(node)
 
-        if node == final:
+        if f_final(node):
             # Found the solution
             min_score = f_score
             break
@@ -230,8 +233,8 @@ def a_star(start: Node, final: Node, f_neighbors: NeighborFunc,
 
     # Reconstruct the path from start to final
     min_path = []
-    min_path.append(final)
-    next = predecessors[final]
+    min_path.append(node)
+    next = predecessors[node]
     while next:
         min_path.append(next)
         next = predecessors[next]
