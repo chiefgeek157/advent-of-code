@@ -44,6 +44,33 @@ def bound2d(extents, point):
         (max(extents[1][0], point[0]), max(extents[1][1], point[1]))
     )
 
+def bound(extents, point):
+    """Expand the given extents tuple with the given point.
+
+    Extents are any subscriptable type [[min_x, min_y], [max_x, max_y]]
+    Point is a subscriptable type [x, y]
+
+    Returns a tuple ((min_x, min_y), (max_x, max_y))
+    """
+    if extents is None:
+        return (tuple(point), tuple(point))
+
+    mins = []
+    maxs = []
+    for i in range(len(point)):
+        mins.append(min(extents[0][i], point[i]))
+        maxs.append(max(extents[1][i], point[i]))
+    return (tuple(mins), tuple(maxs))
+
+def contains(extents, point):
+    """Return True if the point is within the extents."""
+    if extents is None:
+        return False
+    for i in range(len(point)):
+        if point[i] < extents[0][i] or point[i] > extents[1][i]:
+            return False
+    return True
+
 def union1d(extents, seg):
     """Return the union of extents and seg in 1 dimension.
 

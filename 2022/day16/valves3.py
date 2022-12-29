@@ -70,7 +70,7 @@ def get_neighbors(node, depth):
     dist: (sum_rate - active_rate) * len(path_to_neighbor)
     """
     neighbors = []
-    name, counter, path, active_rate, open_valves = node
+    name, counter, total_flow, path, best_flows, active_rate, open_valves = node
     if counter <= 1:
         # Cannot proceed any further
         return neighbors
@@ -79,10 +79,11 @@ def get_neighbors(node, depth):
     if name != 'AA' and name not in open_valves:
         # Add a step to open this valve
         next_counter = counter - 1
+        next_total_flow = total_flow + rate * next_counter
         next_path = tuple(list(path) + [name])
         next_active_rate = active_rate + rate
         next_open_valves = tuple(list(open_valves) + [name])
-        next_node = (name, next_counter, next_path, next_active_rate, next_open_valves)
+        next_node = (name, next_counter, next_total_flow, next_path, next_active_rate, next_open_valves)
         dist = sum_rates - active_rate
         neighbor = (next_node, dist)
         neighbors.append(neighbor)
@@ -100,7 +101,7 @@ def get_neighbors(node, depth):
             neighbors.append(neighbor)
     return neighbors
 
-start = ('AA', 30, tuple(['AA']), 0, tuple())
+start = ('AA', 30, 0, tuple(['AA']), tuple(0), 0, tuple())
 min_dist, min_path = djikstra(start, get_neighbors)
 
 # Node = (name, counter, path, cum_dist, cum_flow, flow_rate, open_valves)
