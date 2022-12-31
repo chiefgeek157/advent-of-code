@@ -1,6 +1,7 @@
 """A bunch of utilities"""
 
 from copy import copy
+import math
 
 def print_vert_header(h_min, h_max, leader='', l_pad='', r_pad=''):
     labels = []
@@ -165,3 +166,12 @@ def complex_bounds(b: tuple[complex, complex], p: complex):
 def complex_area(b: tuple[complex, complex]) -> int:
     """Return the area enclosed by the given bounds."""
     return int(b[1].real - b[0].real + 1) * int(b[1].imag - b[0].imag + 1)
+
+def round_int(x: float) -> int:
+    if x < 0:
+        return math.trunc(x) if -x % 1 < 0.5 else math.floor(x)
+    else:
+        return math.trunc(x) if  x % 1 < 0.5 else math.ceil(x)
+
+def round_complex(c: complex) -> complex:
+    return complex(round_int(c.real), round_int(c.imag))
