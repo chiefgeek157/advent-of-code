@@ -11,23 +11,37 @@ funcs = {
     '*': lambda x, y: x * y
 }
 
+def apply_result(stack, result):
+    while stack:
+        op = stack
 def parse_line(line):
     root = None
-    stack = []
+    # Stack entries are [left, op, right]
+    stack = [[None, None, None]]
     for c in line:
         if c == '(':
-            pass
+            stack.append([None, None, None])
         elif c == ')':
-            pass
+            op = stack.pop()
+            result = funcs[op[1]](op[0], op[2])
+            if len(stack) == 0:
+                stack.append([result, None, None])
+            else:
+                op = stack[-1]
+                while
+                if op[0] is None:
+                    op[0] = result
+                else
         elif c == '*' or c == '+':
-            node = bt.Node(c, )
+            op = stack[-1]
+            op[1] = c
         else:
             d = int(c)
-            if left:
-                left_stack.append(d)
-                left = False
+            op = stack[-1]
+            if op[0] is None:
+                op[0] = d
             else:
-                node.right = d
+
     return root
 
 sum_results = 0
