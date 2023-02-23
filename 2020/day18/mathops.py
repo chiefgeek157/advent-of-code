@@ -11,37 +11,40 @@ funcs = {
     '*': lambda x, y: x * y
 }
 
-def apply_result(stack, result):
-    while stack:
-        op = stack
+# Node = [type, parent, ...]
+# Node types:
+# 0: const
+#    [value]
+# 1: left op right
+#    [left, op, right]
+# 2: parentheses
+#    [child]
+
+def add_child(node, child):
+    child[1] = node
+    if node[0] == 1 and node[4] is None:
+        node[4] = child
+    else:
+        node[2] = child
+
 def parse_line(line):
-    root = None
-    # Stack entries are [left, op, right]
-    stack = [[None, None, None]]
+    root = [2, None]
+    node = root
     for c in line:
         if c == '(':
-            stack.append([None, None, None])
+            child = [2, node, None]
+            add_child(node, child)
+            node = child
         elif c == ')':
-            op = stack.pop()
-            result = funcs[op[1]](op[0], op[2])
-            if len(stack) == 0:
-                stack.append([result, None, None])
-            else:
-                op = stack[-1]
-                while
-                if op[0] is None:
-                    op[0] = result
-                else
+            # move up to parent
+            node = node[1]
         elif c == '*' or c == '+':
-            op = stack[-1]
-            op[1] = c
+
+            node[3] = c
         else:
             d = int(c)
-            op = stack[-1]
-            if op[0] is None:
-                op[0] = d
-            else:
-
+            child = [0, node, d]
+            add_child(node, child)
     return root
 
 sum_results = 0
