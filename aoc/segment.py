@@ -12,7 +12,7 @@ def intersection(seg1: tuple, seg2: tuple) -> tuple:
         return None
     return (max(seg1[0], seg2[0]), min(seg1[1], seg2[1]))
 
-def split(seg1: tuple, seg2: tuple) -> list(tuple):
+def split(seg1: tuple, seg2: tuple) -> list:
     '''Returns a list of three segments representing the split of seg1 by seg2.
 
     The returned array will contain 1-3 tuples of the form ((start, end), overlap)
@@ -53,18 +53,18 @@ def split(seg1: tuple, seg2: tuple) -> list(tuple):
     results = []
 
     if not intersects(seg1, seg2):
-        results.append((seg1, 1))
+        results.append((seg1[0], seg1[1], 1))
         return results
 
     inter = intersection(seg1, seg2)
-    new1 = ((min(seg1[0], seg2[0]), min(seg1[1], seg2[1]. inter[0] - 1)),
+    new1 = (min(seg1[0], seg2[0]), min(seg1[1], seg2[1], inter[0] - 1),
             1 if seg1[0] < seg2[0] else 2)
-    new2 = ((inter[0], inter[1]), 3)
+    new2 = (inter[0], inter[1], 3)
     new3 = (max(seg1[0], seg2[0], inter[1] + 1), max(seg1[1], seg2[1]),
             1 if seg1[1] > seg2[1] else 2)
-    if new1[0][0] <= new1[0][1]:
+    if new1[0] <= new1[1]:
         results.append(new1)
     results.append(new2)
-    if new3[0][0] <= new3[0][1]:
+    if new3[0] <= new3[1]:
         results.append(new3)
     return results
