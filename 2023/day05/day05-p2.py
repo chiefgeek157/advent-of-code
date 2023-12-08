@@ -24,27 +24,37 @@ def insert_segment(segs, new_seg) -> list:
     Segments are (start, end, offset) tuples.
 
     Returns the new list of segments."""
-    # print(f"Inserting {new_seg}")
+    # print(f"       Inserting {new_seg}")
     results = []
+    used_up_new_seg = False
     for i in range(len(segs)):
         seg = segs[i]
+        print(f'      Checking new_seg {new_seg} against {seg}')
         split_segs = sg.split((seg[0], seg[1]), (new_seg[0], new_seg[1]))
-        print(f"   Split segs {split_segs}")
-        for split_seg in split_segs:
-            if split_seg[2] == 1:
+        print(f'      Split segs {split_segs}')
+        for i in range(len(split_segs) - 1):
+            if split_segs[i][2] == 1:
                 offset = seg[2]
-            elif split_seg[2] == 2:
+            elif split_segs[2] == 2:
                 offset = new_seg[2]
             else:
                 offset = seg[2] + new_seg[2]
-            results.append((split_seg[0], split_seg[1], offset))
-            print(f"   Added {results[-1]}")
+            results.append((split_segs[i][0], split_segs[i][1], offset))
+            print(f'      Added {results[-1]}')
+        if len(split_segs) <= 1:
+            used_up_new_seg = True
+            break
+        new_seg = split_segs[-1]
+    if not used_up_new_seg:
+        results.append(new_seg)
+        print(f'      Added {results[-1]}')
     return results
 
 
 def main():
-    # Seeds are tuples of (start, end, 0)
-    seeds = []
+    # Segs are tuples of (start, end, offset)
+    # Seeds have an offset of 0
+    segs = []
 
     # Maps are arrays of tuples of (start, end, offset)
     maps = []
@@ -56,8 +66,10 @@ def main():
         for i in range(0, len(seed_fields), 2):
             start = int(seed_fields[i])
             end = start + int(seed_fields[i + 1]) - 1
-            seeds.append((start, end, 0))
-        print(f"Seeds: {seeds}")
+            segs.append((start, end, 0))
+        # Sort the seed segments
+        segs = sorted(segs, key=lambda x: x[0])
+        print(f"Seed segs: {segs}")
 
         # Read maps
         map_type = -1
@@ -88,27 +100,13 @@ def main():
         maps[i] = sorted(maps[i], key=lambda x: x[0])
         print(f"Sorted map {MAPS[i]}: {maps[i]}")
 
-    # Segemnts is an array of tuples
-    # Each tuple has a start and end num and an offset
-    segs = [(0, MAX, 0)]
-
-    # Add the seed segments
-    for seed in seeds:
-        print(f"Adding seed {seed}")
-        segs = insert_segment(segs, seed)
-        print(f'   segs: {segs}')
-
-    # Now, for each seed, apply the maps in order
-    min_location = MAX
+    # Apply the maps in order
     for i in range(len(maps)):
         print(f'Applying map {MAPS[i]}')
         for entry in maps[i]:
             print(f'   Applying {entry}')
             segs = insert_segment(segs, entry)
             print(f"   segs: {segs}")
-            break
-
-    print(f"\nPart 2: {min_location}")
 
 
 if __name__ == "__main__":
