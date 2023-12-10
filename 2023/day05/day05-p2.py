@@ -80,7 +80,7 @@ def main():
                 line = f.readline()
                 map_type += 1
                 maps.append([])
-                print(f"Reading map type {MAPS[map_type]}")
+                # print(f"Reading map type {MAPS[map_type]}")
             else:
                 fields = line.split(" ")
                 dst = int(fields[0])
@@ -91,7 +91,7 @@ def main():
                 # and the offset to the destination num
                 entry = (src, src + cnt - 1, dst - src)
                 maps[map_type].append(entry)
-                print(f"   Read {fields} => {entry}")
+                # print(f"   Read {fields} => {entry}")
 
             line = f.readline()
 
