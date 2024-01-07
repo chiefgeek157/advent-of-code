@@ -1,9 +1,9 @@
 from typing import Sequence
 
-# filename = '2023/day10/input.txt'
+filename = '2023/day10/input.txt'
 # filename = '2023/day10/test1.txt'
 # filename = '2023/day10/test2.txt'
-filename = '2023/day10/test3.txt'
+# filename = '2023/day10/test3.txt'
 # filename = '2023/day10/test4.txt'
 # filename = '2023/day10/test5.txt'
 # filename = '2023/day10/test6.txt'
@@ -30,6 +30,21 @@ pipe_dir_incr = {
     ('J', 1): 1,
     ('7', 0): 1,
     ('7', 3): -1,
+}
+
+prev_dirs = {
+    ('-', 0): 2,
+    ('-', 2): 0,
+    ('|', 1): 3,
+    ('|', 3): 1,
+    ('L', 2): 3,
+    ('L', 3): 0,
+    ('F', 0): 1,
+    ('F', 1): 0,
+    ('J', 2): 3,
+    ('J', 3): 2,
+    ('7', 2): 1,
+    ('7', 1): 2,
 }
 
 # Dirs clockwise from right
@@ -137,6 +152,7 @@ def main() -> int:
     pos = start_pos
     pipe = start_pipe
     dir = dir1
+    prev_dir = dir2
 
     # Travel in dir1 direction, but we still have to detect if this is CW or CCW
     # by counting the number of left and right turns. MOre right turns means
@@ -145,12 +161,11 @@ def main() -> int:
     left_turns = 0
 
     while (right_turns + left_turns) == 0 or pos != start_pos:
-        print(f'Loop: pos: {pos}, pipe: {pipe}, dir: {dir}')
+        print(f'Loop: pos: {pos}, pipe: {pipe}, dir: {dir}, prev_dir: {prev_dir}', end=' ')
         next_pos = point_add(pos, dir_offsets[dir])
         next_pipe = grid_get(grid, next_pos)
         dir_incr = pipe_dir_incr[(next_pipe, dir)]
         next_dir = (dir + dir_incr) % 4
-        prev_dir = (dir + 2) % 4
         print(f'  next_pos: {next_pos}, next_pipe: {next_pipe}, '
               f'dir_incr: {dir_incr}, next_dir: {next_dir}, '
               f'prev_dir: {prev_dir}')
@@ -159,18 +174,19 @@ def main() -> int:
         elif dir_incr < 0:
             left_turns += 1
 
-        loop.append((pos, next_dir, prev_dir))
+        loop.append((pos, dir, prev_dir))
         loop_pos.add(pos)
 
         pos = next_pos
         pipe = next_pipe
+        prev_dir = (dir + 2) % 4
         dir = next_dir
 
         if len(loop) > 100000:
             print(f'Abort loop {loop}')
             exit(1)
     print(f'Loop[{len(loop)}]')
-    print(loop_pos)
+    print(loop)
 
     cw = (right_turns > left_turns)
     print(f'Loop in clockwise: {cw} (right: {right_turns}, left: {left_turns})')
@@ -189,7 +205,7 @@ def main() -> int:
         # when emerging from this cell
         pos, dir1, dir2 = loop[i]
         cw_dir = dir1 if cw else dir2
-        print(f'loop[{i}]: pos: {pos}, cw_dir: {cw_dir}')
+        print(f'loop[{i}]: pos: {pos}, cw_dir: {cw_dir}, pipe: {grid_get(grid, pos)}', end=' ')
 
         side_dir = (cw_dir + 1) % 4
         side_pos = point_add(pos, dir_offsets[side_dir])
@@ -208,19 +224,19 @@ def main() -> int:
 
     steps = 0
     while work:
-        print(f'Inside[{len(inside_pos)}]')
-        print(inside_pos)
-        print(f'  Work[{len(work)}]')
-        print(work)
-        print(f'  Visited[{len(visited)}]')
-        print(visited)
+        # print(f'Inside[{len(inside_pos)}]')
+        # print(inside_pos)
+        # print(f'  Work[{len(work)}]')
+        # print(work)
+        # print(f'  Visited[{len(visited)}]')
+        # print(visited)
         pos = work.pop()
-        print(f'  Visiting {pos}')
+        # print(f'  Visiting {pos}')
         visited.add(pos)
         for d in range(4):
             other_pos = point_add(pos, dir_offsets[d])
             other_pipe = grid_get(grid, other_pos)
-            print(f'  Checking {other_pos}: {other_pipe}')
+            # print(f'  Checking {other_pos}: {other_pipe}')
             if (other_pipe is not None
                     and other_pos not in visited
                     and other_pos not in work
@@ -229,7 +245,8 @@ def main() -> int:
                 inside_pos.add(other_pos)
                 work.add(other_pos)
         steps += 1
-        if steps > 10:
+        if steps > 10000:
+            print(f'Early exit')
             exit(0)
 
     return len(inside_pos)
