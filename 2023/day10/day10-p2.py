@@ -83,6 +83,9 @@ def grid_get(grid: Sequence, p: Sequence[int], default=None) -> any:
             # print(f'Returning {sub[p[0]]}')
             return sub[p[0]]
 
+def print_grid(grid: Sequence, loop: Sequence) -> None:
+
+
 def main() -> int:
     # Grid is an array of strings
     grid = []
