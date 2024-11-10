@@ -1,0 +1,4 @@
+[workspace]
+resolver = "2"
+members = ["2016/day03/part*"]
+exclude =["2016/day01"]
